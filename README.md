@@ -79,7 +79,7 @@ predictive-maintenance/
 
 ## 🚀 Roadmap (2-Week Sprint)
 - [x] **Day 1:** Project scaffold, dataset acquisition, initial EDA & target leakage audit.
-- [ ] **Day 2:** Physics feature engineering ($\Delta T$, Mechanical Power, Strain Index).
+- [x] **Day 2:** Physics feature engineering ($\Delta T$, Mechanical Power, Strain Index).
 - [ ] **Day 3:** Class imbalance handling (scale_pos_weight, PR-AUC baseline).
 - [ ] **Day 4:** Scikit-learn Pipeline & XGBoost model tuning.
 - [ ] **Day 5:** Cost matrix threshold calibration + SHAP model explainability.
