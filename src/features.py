@@ -22,6 +22,7 @@ Physics Foundations:
 
 import numpy as np
 import pandas as pd
+import re
 from typing import Dict, Optional
 
 
@@ -30,6 +31,29 @@ TYPE_CAPACITY_MAP: Dict[str, float] = {
     'M': 12000.0,
     'H': 13000.0
 }
+
+
+def clean_column_names(data: pd.DataFrame) -> pd.DataFrame:
+    """
+    Sanitizes column names to be compatible with XGBoost, LightGBM, and standard Python identifiers.
+    Removes brackets '[', ']', '<', '>', replaces spaces with underscores, and converts to lowercase.
+
+    Parameters:
+    -----------
+    data : pd.DataFrame
+        Input dataframe with raw column names.
+
+    Returns:
+    --------
+    pd.DataFrame
+        Dataframe with sanitized column names.
+    """
+    df = data.copy()
+    df.columns = [
+        re.sub(r'[\[\]<>]', '', col).strip().replace(' ', '_').lower()
+        for col in df.columns
+    ]
+    return df
 
 
 def engineer_features(data: pd.DataFrame) -> pd.DataFrame:
@@ -93,6 +117,7 @@ if __name__ == '__main__':
     print(sample_data)
 
     transformed = engineer_features(sample_data)
-    print("\nTransformed Data with Physics Features:")
-    print(transformed[['temp_diff', 'power_w', 'overstrain', 'overstrain_ratio']])
+    cleaned = clean_column_names(transformed)
+    print("\nSanitized Columns:")
+    print(list(cleaned.columns))
     print("\nSanity check passed successfully!")

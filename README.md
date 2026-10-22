@@ -63,12 +63,16 @@ predictive-maintenance/
 ├── api/                  # FastAPI serving layer (Pydantic schemas, endpoints)
 ├── data/
 │   ├── raw/              # Original immutable dataset (ai4i2020.csv)
-│   └── processed/        # Cleaned, train/test split data
+│   └── processed/        # Cleaned, train/test split data (train.csv, test.csv)
 ├── models/               # Serialized pipelines (joblib artifacts)
 ├── notebooks/            # Exploratory and prototyping notebooks
-│   └── 01_eda_initial_inspection.ipynb
+│   ├── 01_eda_initial_inspection.ipynb
+│   ├── 02_feature_engineering.ipynb
+│   └── 03_imbalance_and_baselines.ipynb
+├── reports/
+│   └── figures/          # Evaluation plots and diagnostic figures
 ├── src/                  # Production-grade modular Python code
-│   ├── features.py       # Physics domain feature engineering
+│   ├── features.py       # Physics domain feature engineering & sanitization
 │   ├── pipeline.py       # Scikit-learn Pipeline & ColumnTransformer
 │   └── train.py          # Training, cross-validation, and threshold tuning
 ├── requirements.txt      # Project dependencies
@@ -80,7 +84,7 @@ predictive-maintenance/
 ## 🚀 Roadmap (2-Week Sprint)
 - [x] **Day 1:** Project scaffold, dataset acquisition, initial EDA & target leakage audit.
 - [x] **Day 2:** Physics feature engineering ($\Delta T$, Mechanical Power, Strain Index).
-- [ ] **Day 3:** Class imbalance handling (scale_pos_weight, PR-AUC baseline).
+- [x] **Day 3:** Class imbalance handling (`scale_pos_weight`, PR-AUC baseline).
 - [ ] **Day 4:** Scikit-learn Pipeline & XGBoost model tuning.
 - [ ] **Day 5:** Cost matrix threshold calibration + SHAP model explainability.
 - [ ] **Day 6–7:** FastAPI microservice (`/predict`, `/explain`, `/simulate-stream`).
