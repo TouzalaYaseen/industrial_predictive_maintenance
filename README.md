@@ -85,7 +85,7 @@ predictive-maintenance/
 - [x] **Day 1:** Project scaffold, dataset acquisition, initial EDA & target leakage audit.
 - [x] **Day 2:** Physics feature engineering ($\Delta T$, Mechanical Power, Strain Index).
 - [x] **Day 3:** Class imbalance handling (`scale_pos_weight`, PR-AUC baseline).
-- [ ] **Day 4:** Scikit-learn Pipeline & XGBoost model tuning.
+- [x] **Day 4:** Scikit-learn Pipeline & XGBoost model tuning.
 - [ ] **Day 5:** Cost matrix threshold calibration + SHAP model explainability.
 - [ ] **Day 6–7:** FastAPI microservice (`/predict`, `/explain`, `/simulate-stream`).
 - [ ] **Day 8–9:** Interactive telemetry simulator frontend dashboard.
