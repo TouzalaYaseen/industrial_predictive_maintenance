@@ -60,24 +60,38 @@ Interactive Telemetry Monitoring Dashboard
 
 ```
 predictive-maintenance/
-├── api/                  # FastAPI serving layer (Pydantic schemas, endpoints)
+├── api/                  # Production FastAPI serving layer
+│   ├── __init__.py
+│   ├── schemas.py        # Pydantic data contracts (TelemetryInput, Prediction, Explanation)
+│   └── main.py           # REST endpoints (/health, /predict, /explain, /stream)
 ├── data/
 │   ├── raw/              # Original immutable dataset (ai4i2020.csv)
 │   └── processed/        # Cleaned, train/test split data (train.csv, test.csv)
-├── models/               # Serialized pipelines (joblib artifacts)
+├── models/               # Serialized pipelines (pipeline.joblib)
 ├── notebooks/            # Exploratory and prototyping notebooks
 │   ├── 01_eda_initial_inspection.ipynb
 │   ├── 02_feature_engineering.ipynb
-│   └── 03_imbalance_and_baselines.ipynb
+│   ├── 03_imbalance_and_baselines.ipynb
+│   ├── 04_pipeline_and_tuning.ipynb
+│   └── 05_cost_calibration_and_shap.ipynb
 ├── reports/
 │   └── figures/          # Evaluation plots and diagnostic figures
 ├── src/                  # Production-grade modular Python code
 │   ├── features.py       # Physics domain feature engineering & sanitization
-│   ├── pipeline.py       # Scikit-learn Pipeline & ColumnTransformer
-│   └── train.py          # Training, cross-validation, and threshold tuning
+│   └── pipeline.py       # Scikit-learn Pipeline & ColumnTransformer
 ├── requirements.txt      # Project dependencies
 └── README.md             # Project documentation
 ```
+
+---
+
+## ⚡ API Quickstart
+
+Launch the FastAPI microservice locally:
+```bash
+uvicorn api.main:app --reload --port 8000
+```
+Open interactive Swagger UI docs: `http://localhost:8000/docs`
 
 ---
 
@@ -87,6 +101,6 @@ predictive-maintenance/
 - [x] **Day 3:** Class imbalance handling (`scale_pos_weight`, PR-AUC baseline).
 - [x] **Day 4:** Scikit-learn Pipeline & XGBoost model tuning.
 - [x] **Day 5:** Cost matrix threshold calibration + SHAP model explainability.
-- [ ] **Day 6–7:** FastAPI microservice (`/predict`, `/explain`, `/simulate-stream`).
-- [ ] **Day 8–9:** Interactive telemetry simulator frontend dashboard.
-- [ ] **Day 10–12:** Docker containerization, standalone repo publication & live deployment.
+- [x] **Day 6:** FastAPI microservice (`/health`, `/predict`, `/explain`, `/stream/tick`, `/stream/window`).
+- [ ] **Day 7–8:** Interactive telemetry simulator frontend dashboard.
+- [ ] **Day 9–10:** Docker containerization, standalone repo publication & live deployment.
