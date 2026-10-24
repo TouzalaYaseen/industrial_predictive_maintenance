@@ -2,6 +2,10 @@
 
 A production-grade machine learning system and IoT telemetry microservice for early detection of milling machine component failures, cost-sensitive threshold calibration, TreeSHAP root-cause explainability, and real-time operational monitoring.
 
+* Live Operational Cockpit: https://industrial-predictive-maintenance-yn32.onrender.com
+* Interactive API Documentation (Swagger): https://industrial-predictive-maintenance-yn32.onrender.com/docs
+* Live Health Probe: https://industrial-predictive-maintenance-yn32.onrender.com/health
+
 ---
 
 ## Executive Summary and Business Impact
@@ -183,7 +187,7 @@ Scores incoming telemetry payload against the calibrated threshold.
 curl -X POST "http://localhost:8000/predict" \
      -H "Content-Type: application/json" \
      -d '{
-       "type": "M",
+       "machine_type": "M",
        "air_temperature_k": 298.1,
        "process_temperature_k": 308.6,
        "rotational_speed_rpm": 1551.0,
@@ -209,7 +213,7 @@ Performs real-time TreeSHAP decomposition on candidate machine telemetry.
 curl -X POST "http://localhost:8000/explain" \
      -H "Content-Type: application/json" \
      -d '{
-       "type": "L",
+       "machine_type": "L",
        "air_temperature_k": 302.4,
        "process_temperature_k": 311.8,
        "rotational_speed_rpm": 1380.0,
