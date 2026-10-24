@@ -1,0 +1,34 @@
+# Version control
+.git
+.gitignore
+
+# Python bytecode & cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Local virtual environments
+.venv/
+venv/
+env/
+ENV/
+
+# Development notebooks and evaluation artifacts
+notebooks/
+reports/
+*.ipynb
+
+# Model training/test data splits (raw ai4i2020.csv is kept for IoT simulation)
+data/processed/
+
+# IDE and OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+*.swp
+*.bak

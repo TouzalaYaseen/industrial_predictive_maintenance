@@ -88,13 +88,34 @@ predictive-maintenance/
 
 ---
 
-## ⚡ API Quickstart
+## ⚡ API & Docker Quickstart
 
-Launch the FastAPI microservice locally:
+### Option A: Local Python Environment
+Launch the FastAPI microservice directly:
 ```bash
 uvicorn api.main:app --reload --port 8000
 ```
-Open interactive Swagger UI docs: `http://localhost:8000/docs`
+
+### Option B: Production Docker Container (Recommended)
+Build the lightweight container image:
+```bash
+docker build -t predictive-maintenance:v1 .
+```
+
+Run the containerized microservice with port forwarding:
+```bash
+docker run -d --name pdm-engine -p 8000:8000 --rm predictive-maintenance:v1
+```
+
+Access services:
+- **Interactive Telemetry Cockpit:** `http://localhost:8000/`
+- **Swagger API Documentation:** `http://localhost:8000/docs`
+- **Container Health Probing:** `http://localhost:8000/health`
+
+Stop the container:
+```bash
+docker stop pdm-engine
+```
 
 ---
 
@@ -107,5 +128,5 @@ Open interactive Swagger UI docs: `http://localhost:8000/docs`
 - [x] **Day 6:** FastAPI microservice (`/health`, `/predict`, `/explain`, `/stream/tick`, `/stream/window`).
 - [x] **Day 7:** Production Telemetry Dashboard & rolling Chart.js strip-charts.
 - [x] **Day 8:** What-If Physics Sandbox, TreeSHAP root-cause attribution drawer & UI/UX polish.
-- [ ] **Day 9:** Production Docker containerization (`Dockerfile`, `.dockerignore`, build & local run).
+- [x] **Day 9:** Production Docker containerization (`Dockerfile`, `.dockerignore`, build & local run).
 - [ ] **Day 10:** Standalone GitHub repo graduation (`git subtree split`), live deployment (Hugging Face Spaces), & portfolio showcase.
