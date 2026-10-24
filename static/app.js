@@ -28,9 +28,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     lucide.createIcons();
   }
 
-  // Verify API health
-  await checkApiHealth();
-
   // Initialize rolling Chart.js instances
   initCharts();
 
@@ -40,33 +37,51 @@ document.addEventListener('DOMContentLoaded', async () => {
   setupSandboxControls();
   setupShapInspector();
 
+  // Verify API health and initiate periodic polling (every 8 seconds)
+  await checkApiHealth();
+  setInterval(checkApiHealth, 8000);
+
   // Load initial telemetry window starting at tick 0
   await loadInitialWindow(0);
 });
 
+let hasBeenOnline = false;
+
 /**
- * Checks FastAPI backend health and latency.
+ * Checks FastAPI backend health and latency with cold-start resilience.
  */
 async function checkApiHealth() {
   const statusBadge = document.getElementById('api-status-badge');
   const statusText = document.getElementById('api-status-text');
+  if (!statusText) return;
   const startTime = performance.now();
 
   try {
-    const res = await fetch('/health');
+    const res = await fetch('/health', { cache: 'no-store' });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const data = await res.json();
     const latency = Math.round(performance.now() - startTime);
 
     if (statusBadge) statusBadge.className = 'flex items-center justify-between text-xs font-mono';
 
     if (data.status === 'healthy' && data.model_loaded) {
-      statusText.innerHTML = `<span class="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-mono text-[11px] font-semibold flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Online (${latency}ms)</span>`;
+      hasBeenOnline = true;
+      statusText.innerHTML = `<span class="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-mono text-[11px] font-semibold flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>Online (${latency}ms)</span>`;
+
+      // If initial window failed during cold start, auto-load tick 0 now that server is awake
+      if (!state.latestTick && state.mechanicalChart && state.thermalChart) {
+        await loadInitialWindow(0);
+      }
     } else {
       statusText.innerHTML = `<span class="px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 font-mono text-[11px] font-semibold flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>Degraded</span>`;
     }
   } catch (err) {
     if (statusBadge) statusBadge.className = 'flex items-center justify-between text-xs font-mono';
-    statusText.innerHTML = `<span class="px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 font-mono text-[11px] font-semibold flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>Offline</span>`;
+    if (!hasBeenOnline) {
+      statusText.innerHTML = `<span class="px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 font-mono text-[11px] font-semibold flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-amber-500 animate-ping"></span>Waking Up...</span>`;
+    } else {
+      statusText.innerHTML = `<span class="px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 font-mono text-[11px] font-semibold flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>Offline</span>`;
+    }
   }
 }
 
