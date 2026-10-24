@@ -98,13 +98,14 @@ Open interactive Swagger UI docs: `http://localhost:8000/docs`
 
 ---
 
-## 🚀 Roadmap (2-Week Sprint)
+## 🚀 Roadmap (10-Day Tactical Sprint)
 - [x] **Day 1:** Project scaffold, dataset acquisition, initial EDA & target leakage audit.
 - [x] **Day 2:** Physics feature engineering ($\Delta T$, Mechanical Power, Strain Index).
 - [x] **Day 3:** Class imbalance handling (`scale_pos_weight`, PR-AUC baseline).
 - [x] **Day 4:** Scikit-learn Pipeline & XGBoost model tuning.
-- [x] **Day 5:** Cost matrix threshold calibration + SHAP model explainability.
+- [x] **Day 5:** Cost matrix threshold calibration ($t^* = 0.020$) + TreeSHAP explainability.
 - [x] **Day 6:** FastAPI microservice (`/health`, `/predict`, `/explain`, `/stream/tick`, `/stream/window`).
-- [x] **Day 7:** Production Telemetry Dashboard & Alerting Cockpit (shadcn Zinc Dark, Chart.js rolling strip-charts, TreeSHAP inspector, What-If sandbox).
-- [ ] **Day 8:** Dashboard refinement, edge case stress-testing, and UI polish.
-- [ ] **Day 9–10:** Docker containerization, standalone repo publication & live deployment.
+- [x] **Day 7:** Production Telemetry Dashboard & rolling Chart.js strip-charts.
+- [x] **Day 8:** What-If Physics Sandbox, TreeSHAP root-cause attribution drawer & UI/UX polish.
+- [ ] **Day 9:** Production Docker containerization (`Dockerfile`, `.dockerignore`, build & local run).
+- [ ] **Day 10:** Standalone GitHub repo graduation (`git subtree split`), live deployment (Hugging Face Spaces), & portfolio showcase.
