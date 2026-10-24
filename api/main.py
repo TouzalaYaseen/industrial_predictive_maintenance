@@ -14,7 +14,8 @@ from typing import Dict, Any, List
 
 from fastapi import FastAPI, HTTPException, Query, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import StreamingResponse, RedirectResponse
+from fastapi.responses import StreamingResponse, RedirectResponse, FileResponse
+from fastapi.staticfiles import StaticFiles
 import joblib
 import numpy as np
 import pandas as pd
@@ -25,6 +26,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SRC_DIR = BASE_DIR / "src"
 MODEL_PATH = BASE_DIR / "models" / "pipeline.joblib"
 DATA_PATH = BASE_DIR / "data" / "raw" / "ai4i2020.csv"
+STATIC_DIR = BASE_DIR / "static"
 
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
@@ -119,11 +121,19 @@ app.add_middleware(
 )
 
 
+# Mount static files directory for telemetry dashboard
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
+
+
 @app.get("/", include_in_schema=False)
 async def root():
     """
-    Redirects root traffic to interactive Swagger UI documentation.
+    Serves the production industrial telemetry cockpit dashboard.
+    Falls back to Swagger documentation if frontend files are missing.
     """
+    index_file = STATIC_DIR / "index.html"
+    if index_file.exists():
+        return FileResponse(str(index_file))
     return RedirectResponse(url="/docs")
 
 

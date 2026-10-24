@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CNC Telemetry & Predictive Maintenance Cockpit</title>
+  
+  <!-- Inter & JetBrains Mono Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          },
+          colors: {
+            zinc: {
+              950: '#09090b',
+              900: '#18181b',
+              850: '#202024',
+              800: '#27272a',
+              700: '#3f3f46',
+              600: '#52525b',
+              400: '#a1a1aa',
+              300: '#d4d4d8',
+              200: '#e4e4e7',
+              100: '#f4f4f5',
+              50: '#fafafa',
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <style>
+    /* Custom Scrollbar adhering to shadcn zinc dark styling */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #09090b;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #27272a;
+      border-radius: 9999px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #3f3f46;
+    }
+    
+    /* Pulse glow effects */
+    .glow-emerald {
+      box-shadow: 0 0 15px -3px rgba(16, 185, 129, 0.25);
+    }
+    .glow-amber {
+      box-shadow: 0 0 15px -3px rgba(245, 158, 11, 0.25);
+    }
+    .glow-rose {
+      box-shadow: 0 0 20px -2px rgba(244, 63, 94, 0.4);
+    }
+  </style>
+</head>
+<body class="bg-zinc-950 text-zinc-100 font-sans min-h-screen antialiased flex flex-col selection:bg-zinc-800 selection:text-zinc-50">
+
+  <!-- Top Navigation Bar -->
+  <header class="border-b border-zinc-800 bg-zinc-950/80 backdrop-blur-md sticky top-0 z-50 px-6 py-3.5">
+    <div class="max-w-7xl mx-auto flex items-center justify-between">
+      
+      <!-- Brand & Facility Title -->
+      <div class="flex items-center space-x-3.5">
+        <div class="w-9 h-9 rounded-lg bg-zinc-900 border border-zinc-800 flex items-center justify-center text-emerald-400">
+          <i data-lucide="activity" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <h1 class="text-sm font-semibold tracking-tight text-zinc-100">Industrial Telemetry Cockpit</h1>
+            <span class="px-2 py-0.5 text-[10px] font-mono font-medium rounded-full bg-zinc-900 text-zinc-400 border border-zinc-800">CNC-04</span>
+            <span class="px-2 py-0.5 text-[10px] font-mono font-medium rounded-full bg-emerald-950/70 text-emerald-400 border border-emerald-800/60 flex items-center gap-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              LIVE FEED
+            </span>
+          </div>
+          <p class="text-xs text-zinc-400">AI4I 2020 Predictive Maintenance Engine · XGBoost + TreeSHAP</p>
+        </div>
+      </div>
+
+      <!-- System Status Pills & Links -->
+      <div class="flex items-center space-x-3 text-xs">
+        <div class="hidden sm:flex items-center space-x-2 px-3 py-1.5 rounded-md bg-zinc-900 border border-zinc-800 font-mono text-zinc-300">
+          <span class="text-zinc-500">Threshold:</span>
+          <span class="text-amber-400 font-semibold">t* = 0.020 (2.0%)</span>
+        </div>
+        
+        <div class="flex items-center space-x-2 px-3 py-1.5 rounded-md bg-zinc-900 border border-zinc-800 font-mono text-zinc-300" id="api-status-badge">
+          <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+          <span id="api-status-text">FastAPI: Online (<2ms)</span>
+        </div>
+
+        <a href="/docs" target="_blank" class="flex items-center space-x-1.5 px-3 py-1.5 rounded-md bg-zinc-900 hover:bg-zinc-850 border border-zinc-800 text-zinc-300 hover:text-zinc-100 transition-colors">
+          <i data-lucide="file-code-2" class="w-3.5 h-3.5"></i>
+          <span>Swagger API</span>
+        </a>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-6 space-y-6">
+
+    <!-- KPI Metric Cards Grid -->
+    <section class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      
+      <!-- Card 1: Operating State -->
+      <div id="kpi-state-card" class="bg-zinc-900 border border-zinc-800 rounded-xl p-4.5 relative overflow-hidden transition-all duration-300">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-medium text-zinc-400">Machine Health State</span>
+          <i data-lucide="shield-check" class="w-4 h-4 text-emerald-400" id="kpi-state-icon"></i>
+        </div>
+        <div class="mt-3 flex items-baseline space-x-2">
+          <div id="kpi-state-text" class="text-xl font-bold tracking-tight text-emerald-400">OPTIMAL</div>
+          <span id="kpi-state-tier" class="text-xs font-mono text-zinc-400">Tier: Medium (M)</span>
+        </div>
+        <p id="kpi-state-desc" class="mt-1 text-xs text-zinc-400">All sensor envelopes within safe mechanical limits.</p>
+        <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500" id="kpi-state-bar"></div>
+      </div>
+
+      <!-- Card 2: Calibrated Failure Probability -->
+      <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4.5 relative overflow-hidden transition-all duration-300">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-medium text-zinc-400">Calibrated Failure Risk</span>
+          <i data-lucide="gauge" class="w-4 h-4 text-zinc-400"></i>
+        </div>
+        <div class="mt-3 flex items-baseline space-x-2">
+          <div id="kpi-risk-text" class="text-xl font-bold font-mono tracking-tight text-zinc-100">0.42%</div>
+          <span class="text-xs font-mono text-zinc-500">t* = 2.00%</span>
+        </div>
+        <!-- Progress Bar Indicator -->
+        <div class="mt-2.5 w-full bg-zinc-800 rounded-full h-1.5 overflow-hidden">
+          <div id="kpi-risk-bar" class="bg-emerald-500 h-1.5 rounded-full transition-all duration-300" style="width: 21%"></div>
+        </div>
+        <div class="mt-1.5 flex justify-between text-[10px] font-mono text-zinc-400">
+          <span>Safe (&lt;1%)</span>
+          <span class="text-amber-400">Warn (1-2%)</span>
+          <span class="text-rose-400">Shutdown (&ge;2%)</span>
+        </div>
+      </div>
+
+      <!-- Card 3: Mechanical Power & Wear -->
+      <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4.5 relative overflow-hidden transition-all duration-300">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-medium text-zinc-400">Mechanical Load & Power</span>
+          <i data-lucide="cpu" class="w-4 h-4 text-zinc-400"></i>
+        </div>
+        <div class="mt-3 flex items-baseline space-x-2">
+          <div id="kpi-power-text" class="text-xl font-bold font-mono tracking-tight text-zinc-100">6.35 kW</div>
+          <span id="kpi-torque-text" class="text-xs font-mono text-zinc-400">42.8 Nm</span>
+        </div>
+        <div class="mt-1 flex items-center justify-between text-xs text-zinc-400">
+          <span id="kpi-speed-text">1418 RPM</span>
+          <span id="kpi-wear-text" class="font-mono text-zinc-300">Wear: 82 min</span>
+        </div>
+        <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-zinc-700"></div>
+      </div>
+
+      <!-- Card 4: Economic Value Delivered -->
+      <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-4.5 relative overflow-hidden transition-all duration-300">
+        <div class="flex items-center justify-between">
+          <span class="text-xs font-medium text-zinc-400">Holdout Value Delivered</span>
+          <i data-lucide="dollar-sign" class="w-4 h-4 text-emerald-400"></i>
+        </div>
+        <div class="mt-3 flex items-baseline space-x-2">
+          <div class="text-xl font-bold font-mono tracking-tight text-emerald-400">+$288,900</div>
+          <span class="text-xs font-mono text-zinc-400">vs Run-to-Failure</span>
+        </div>
+        <p class="mt-1 text-xs text-zinc-400">94.12% Failure Recall · 64% fewer missed crashes</p>
+        <div class="absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500/50"></div>
+      </div>
+
+    </section>
+
+    <!-- Main Stage Grid: Rolling Charts (Left 2/3) + Transport & Risk Meter (Right 1/3) -->
+    <section class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      
+      <!-- Left Column (2 Cols): Live Telemetry Strip-Charts -->
+      <div class="lg:col-span-2 space-y-5">
+        
+        <!-- Strip-Chart 1: Mechanical Dynamics (Torque & Tool Wear) -->
+        <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center space-x-2.5">
+              <div class="w-2.5 h-2.5 rounded-full bg-blue-500"></div>
+              <h2 class="text-sm font-semibold text-zinc-100">Mechanical Telemetry: Torque [Nm] & Rotational Speed [rpm]</h2>
+            </div>
+            <div class="flex items-center space-x-4 text-xs font-mono">
+              <span class="flex items-center space-x-1.5 text-blue-400">
+                <span class="w-2 h-0.5 bg-blue-500 inline-block"></span>
+                <span>Torque (Nm)</span>
+              </span>
+              <span class="flex items-center space-x-1.5 text-purple-400">
+                <span class="w-2 h-0.5 bg-purple-500 inline-block"></span>
+                <span>Speed / 50</span>
+              </span>
+            </div>
+          </div>
+          <div class="h-44 w-full relative">
+            <canvas id="mechanicalChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Strip-Chart 2: Thermal Dynamics (Air vs Process Temp) -->
+        <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-5">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center space-x-2.5">
+              <div class="w-2.5 h-2.5 rounded-full bg-amber-500"></div>
+              <h2 class="text-sm font-semibold text-zinc-100">Thermal Dynamics: Air vs. Process Temp [K] & Gradient (&Delta;T)</h2>
+            </div>
+            <div class="flex items-center space-x-4 text-xs font-mono">
+              <span class="flex items-center space-x-1.5 text-cyan-400">
+                <span class="w-2 h-0.5 bg-cyan-500 inline-block"></span>
+                <span>Air Temp [K]</span>
+              </span>
+              <span class="flex items-center space-x-1.5 text-amber-400">
+                <span class="w-2 h-0.5 bg-amber-500 inline-block"></span>
+                <span>Process Temp [K]</span>
+              </span>
+              <span class="flex items-center space-x-1.5 text-rose-400">
+                <span class="w-2 h-0.5 bg-rose-500 inline-block"></span>
+                <span>&Delta;T Limit (8.6 K)</span>
+              </span>
+            </div>
+          </div>
+          <div class="h-44 w-full relative">
+            <canvas id="thermalChart"></canvas>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Right Column (1 Col): Transport Bar, Risk Smoke Detector & Quick Jumps -->
+      <div class="space-y-5">
+        
+        <!-- Stream Playback Controller -->
+        <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-5 space-y-4">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+              <i data-lucide="radio" class="w-4 h-4 text-emerald-400"></i>
+              <h2 class="text-sm font-semibold text-zinc-100">IoT Stream Simulator</h2>
+            </div>
+            <span id="stream-index-badge" class="px-2 py-0.5 text-xs font-mono rounded bg-zinc-800 text-zinc-300 border border-zinc-700">
+              Tick: 0 / 10,000
+            </span>
+          </div>
+
+          <!-- Play / Pause / Step Controls -->
+          <div class="flex items-center space-x-2">
+            <button id="btn-play-pause" class="flex-1 flex items-center justify-center space-x-2 py-2 px-3 rounded-lg bg-zinc-100 hover:bg-white text-zinc-900 font-medium text-xs transition-colors">
+              <i data-lucide="play" class="w-4 h-4" id="play-pause-icon"></i>
+              <span id="play-pause-text">Stream Replay</span>
+            </button>
+            <button id="btn-step" class="p-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 transition-colors" title="Step +1 Tick">
+              <i data-lucide="step-forward" class="w-4 h-4"></i>
+            </button>
+            <button id="btn-reset" class="p-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 transition-colors" title="Reset to Start">
+              <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+            </button>
+          </div>
+
+          <!-- Scrubbing Slider -->
+          <div class="space-y-1.5">
+            <div class="flex justify-between text-xs text-zinc-400 font-mono">
+              <span>Historical Timeline</span>
+              <span id="slider-pct">0.0%</span>
+            </div>
+            <input id="timeline-slider" type="range" min="0" max="9999" value="0" class="w-full accent-emerald-500 bg-zinc-800 h-1.5 rounded-lg appearance-none cursor-pointer" />
+          </div>
+
+          <!-- Playback Speed Toggles -->
+          <div class="flex items-center justify-between pt-1 text-xs">
+            <span class="text-zinc-400">Playback Speed:</span>
+            <div class="flex space-x-1 font-mono">
+              <button class="speed-btn px-2 py-1 rounded bg-zinc-800 text-zinc-300 hover:bg-zinc-700 active-speed border border-zinc-700" data-speed="1.0">1x</button>
+              <button class="speed-btn px-2 py-1 rounded bg-zinc-900 text-zinc-400 hover:bg-zinc-800 border border-zinc-800" data-speed="2.0">2x</button>
+              <button class="speed-btn px-2 py-1 rounded bg-zinc-900 text-zinc-400 hover:bg-zinc-800 border border-zinc-800" data-speed="5.0">5x</button>
+            </div>
+          </div>
+
+          <!-- Benchmark Failure Event Quick-Jumps -->
+          <div class="pt-2 border-t border-zinc-800/80 space-y-2">
+            <span class="text-[11px] font-semibold tracking-wider text-zinc-400 uppercase">Jump to Real Failure Events:</span>
+            <div class="grid grid-cols-2 gap-1.5 text-xs font-mono">
+              <button class="jump-btn px-2 py-1.5 rounded bg-zinc-850 hover:bg-zinc-800 border border-zinc-700/60 text-zinc-300 text-left flex justify-between" data-index="160">
+                <span>Overstrain (OSF)</span>
+                <span class="text-zinc-500">#160</span>
+              </button>
+              <button class="jump-btn px-2 py-1.5 rounded bg-zinc-850 hover:bg-zinc-800 border border-zinc-700/60 text-zinc-300 text-left flex justify-between" data-index="50">
+                <span>Power Stall (PWF)</span>
+                <span class="text-zinc-500">#50</span>
+              </button>
+              <button class="jump-btn px-2 py-1.5 rounded bg-zinc-850 hover:bg-zinc-800 border border-zinc-700/60 text-zinc-300 text-left flex justify-between" data-index="69">
+                <span>Heat Dissip (HDF)</span>
+                <span class="text-zinc-500">#69</span>
+              </button>
+              <button class="jump-btn px-2 py-1.5 rounded bg-zinc-850 hover:bg-zinc-800 border border-zinc-700/60 text-zinc-300 text-left flex justify-between" data-index="77">
+                <span>Tool Wear (TWF)</span>
+                <span class="text-zinc-500">#77</span>
+              </button>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- Calibrated Risk Meter & Action Box -->
+        <div class="bg-zinc-900 border border-zinc-800 rounded-xl p-5 space-y-3.5">
+          <div class="flex items-center justify-between">
+            <h2 class="text-sm font-semibold text-zinc-100">Decision Policy & Alerting</h2>
+            <span id="ground-truth-badge" class="px-2 py-0.5 text-[10px] font-mono rounded bg-zinc-800 text-zinc-400">
+              Ground Truth: Normal (0)
+            </span>
+          </div>
+
+          <!-- Dynamic Action Callout -->
+          <div id="alert-callout-box" class="p-3.5 rounded-lg border border-emerald-800/40 bg-emerald-950/20 text-emerald-400 space-y-1">
+            <div class="flex items-center space-x-2 font-semibold text-xs">
+              <i data-lucide="check-circle" class="w-4 h-4" id="alert-callout-icon"></i>
+              <span id="alert-callout-title">CONTINUE RUNNING</span>
+            </div>
+            <p id="alert-callout-desc" class="text-xs text-zinc-400">Risk probability is below calibrated threshold ($t^* = 0.020$). Preventative inspection not required.</p>
+          </div>
+
+          <!-- Quick Root Cause Action Button -->
+          <button id="btn-inspect-shap" class="w-full py-2.5 px-3 rounded-lg bg-zinc-800 hover:bg-zinc-700 text-zinc-200 border border-zinc-700 font-medium text-xs flex items-center justify-center space-x-2 transition-colors">
+            <i data-lucide="microscope" class="w-4 h-4 text-purple-400"></i>
+            <span>Inspect Root Cause (TreeSHAP)</span>
+          </button>
+        </div>
+
+      </div>
+
+    </section>
+
+    <!-- Bottom Stage: Expandable Diagnostics & What-If Sandbox -->
+    <section class="bg-zinc-900 border border-zinc-800 rounded-xl p-5 space-y-4">
+      
+      <!-- Tab Headers -->
+      <div class="flex items-center justify-between border-b border-zinc-800 pb-3">
+        <div class="flex space-x-2">
+          <button id="tab-btn-shap" class="px-3.5 py-1.5 rounded-lg bg-zinc-800 text-zinc-100 font-medium text-xs flex items-center space-x-2 border border-zinc-700">
+            <i data-lucide="bar-chart-horizontal" class="w-4 h-4 text-purple-400"></i>
+            <span>TreeSHAP Feature Attribution</span>
+          </button>
+          <button id="tab-btn-sandbox" class="px-3.5 py-1.5 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-850 font-medium text-xs flex items-center space-x-2 transition-colors">
+            <i data-lucide="sliders" class="w-4 h-4 text-amber-400"></i>
+            <span>Manual "What-If" Physics Sandbox</span>
+          </button>
+        </div>
+        <span class="text-xs text-zinc-400 font-mono" id="tab-status-caption">Single-pass Shapley Attribution (FastAPI /explain)</span>
+      </div>
+
+      <!-- Tab Content 1: TreeSHAP Breakdown -->
+      <div id="tab-content-shap" class="space-y-3">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- SHAP Bars Container -->
+          <div class="space-y-2">
+            <div class="flex justify-between text-xs text-zinc-400 font-mono">
+              <span>Top Physical Drivers (&phi; Shapley Contribution)</span>
+              <span id="shap-base-val">Base Value: &phi;0 = -3.82</span>
+            </div>
+            <div id="shap-bars-list" class="space-y-2 pt-1">
+              <!-- Dynamically populated by JS -->
+              <div class="text-xs text-zinc-400 py-6 text-center">Click "Inspect Root Cause" above or pause on an alert tick to compute TreeSHAP attribution.</div>
+            </div>
+          </div>
+          <!-- Diagnostic Narrative -->
+          <div class="bg-zinc-950 border border-zinc-850 rounded-lg p-4 space-y-2 text-xs">
+            <div class="flex items-center space-x-2 text-zinc-200 font-semibold">
+              <i data-lucide="info" class="w-4 h-4 text-blue-400"></i>
+              <span>Engineering Interpretation</span>
+            </div>
+            <div id="shap-explanation-text" class="text-zinc-400 space-y-1.5 leading-relaxed font-mono text-[11px]">
+              TreeSHAP unpacks the black box into additive physical components. Positive values (&plus;&phi;) push the machine toward catastrophic failure; negative values (&minus;&phi;) stabilize operation.
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tab Content 2: "What-If" Sandbox (Milestone 4) -->
+      <div id="tab-content-sandbox" class="hidden space-y-4">
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <!-- Machine Type -->
+          <div class="space-y-1.5">
+            <label class="text-xs text-zinc-400">Product Quality Tier (Type)</label>
+            <select id="sb-type" class="w-full bg-zinc-950 border border-zinc-800 rounded-lg px-3 py-2 text-xs text-zinc-200 focus:outline-none focus:border-zinc-700">
+              <option value="L">Low (L) - 50% fleet volume</option>
+              <option value="M" selected>Medium (M) - 30% fleet volume</option>
+              <option value="H">High (H) - 20% fleet volume</option>
+            </select>
+          </div>
+          <!-- Air Temp -->
+          <div class="space-y-1.5">
+            <div class="flex justify-between text-xs">
+              <span class="text-zinc-400">Air Temperature [K]</span>
+              <span id="sb-air-val" class="font-mono text-zinc-200">298.2 K</span>
+            </div>
+            <input id="sb-air" type="range" min="295" max="305" step="0.1" value="298.2" class="w-full accent-cyan-500 bg-zinc-800 h-1.5 rounded-lg appearance-none cursor-pointer" />
+          </div>
+          <!-- Process Temp -->
+          <div class="space-y-1.5">
+            <div class="flex justify-between text-xs">
+              <span class="text-zinc-400">Process Temperature [K]</span>
+              <span id="sb-proc-val" class="font-mono text-zinc-200">308.6 K</span>
+            </div>
+            <input id="sb-proc" type="range" min="305" max="315" step="0.1" value="308.6" class="w-full accent-amber-500 bg-zinc-800 h-1.5 rounded-lg appearance-none cursor-pointer" />
+          </div>
+          <!-- Speed -->
+          <div class="space-y-1.5">
+            <div class="flex justify-between text-xs">
+              <span class="text-zinc-400">Rotational Speed [rpm]</span>
+              <span id="sb-speed-val" class="font-mono text-zinc-200">1500 rpm</span>
+            </div>
+            <input id="sb-speed" type="range" min="1100" max="2900" step="10" value="1500" class="w-full accent-purple-500 bg-zinc-800 h-1.5 rounded-lg appearance-none cursor-pointer" />
+          </div>
+          <!-- Torque -->
+          <div class="space-y-1.5">
+            <div class="flex justify-between text-xs">
+              <span class="text-zinc-400">Torque [Nm]</span>
+              <span id="sb-torque-val" class="font-mono text-zinc-200">40.0 Nm</span>
+            </div>
+            <input id="sb-torque" type="range" min="3" max="80" step="0.5" value="40.0" class="w-full accent-blue-500 bg-zinc-800 h-1.5 rounded-lg appearance-none cursor-pointer" />
+          </div>
+          <!-- Tool Wear -->
+          <div class="space-y-1.5">
+            <div class="flex justify-between text-xs">
+              <span class="text-zinc-400">Tool Wear [min]</span>
+              <span id="sb-wear-val" class="font-mono text-zinc-200">80 min</span>
+            </div>
+            <input id="sb-wear" type="range" min="0" max="260" step="1" value="80" class="w-full accent-rose-500 bg-zinc-800 h-1.5 rounded-lg appearance-none cursor-pointer" />
+          </div>
+        </div>
+
+        <!-- Sandbox Predict Action -->
+        <div class="flex items-center justify-between pt-2">
+          <button id="btn-sandbox-eval" class="px-4 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-zinc-950 font-semibold text-xs transition-colors flex items-center space-x-2">
+            <i data-lucide="play" class="w-3.5 h-3.5"></i>
+            <span>Evaluate Physics Scenario (/predict)</span>
+          </button>
+          <div id="sandbox-result-pill" class="text-xs font-mono text-zinc-400">
+            Adjust sliders and click Evaluate
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="border-t border-zinc-850 px-6 py-4 text-xs text-zinc-500 flex flex-col sm:flex-row items-center justify-between max-w-7xl w-full mx-auto">
+    <span>Industrial Predictive Maintenance Telemetry Engine · Production Serving Layer</span>
+    <span class="font-mono text-[11px] mt-1 sm:mt-0">FastAPI + Scikit-Learn + XGBoost + TreeSHAP</span>
+  </footer>
+
+  <!-- Interactive Logic Script -->
+  <script src="/static/app.js"></script>
+</body>
+</html>

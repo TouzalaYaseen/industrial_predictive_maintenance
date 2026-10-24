@@ -64,6 +64,9 @@ predictive-maintenance/
 │   ├── __init__.py
 │   ├── schemas.py        # Pydantic data contracts (TelemetryInput, Prediction, Explanation)
 │   └── main.py           # REST endpoints (/health, /predict, /explain, /stream)
+├── static/               # Zero-build shadcn/ui telemetry monitoring cockpit
+│   ├── index.html        # High-density industrial HUD (Tailwind + Lucide + Chart.js)
+│   └── app.js            # Streaming state, rolling strip-charts, TreeSHAP & sandbox
 ├── data/
 │   ├── raw/              # Original immutable dataset (ai4i2020.csv)
 │   └── processed/        # Cleaned, train/test split data (train.csv, test.csv)
@@ -102,5 +105,6 @@ Open interactive Swagger UI docs: `http://localhost:8000/docs`
 - [x] **Day 4:** Scikit-learn Pipeline & XGBoost model tuning.
 - [x] **Day 5:** Cost matrix threshold calibration + SHAP model explainability.
 - [x] **Day 6:** FastAPI microservice (`/health`, `/predict`, `/explain`, `/stream/tick`, `/stream/window`).
-- [ ] **Day 7–8:** Interactive telemetry simulator frontend dashboard.
+- [x] **Day 7:** Production Telemetry Dashboard & Alerting Cockpit (shadcn Zinc Dark, Chart.js rolling strip-charts, TreeSHAP inspector, What-If sandbox).
+- [ ] **Day 8:** Dashboard refinement, edge case stress-testing, and UI polish.
 - [ ] **Day 9–10:** Docker containerization, standalone repo publication & live deployment.
