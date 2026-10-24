@@ -57,64 +57,69 @@ async function checkApiHealth() {
     const data = await res.json();
     const latency = Math.round(performance.now() - startTime);
 
+    if (statusBadge) statusBadge.className = 'flex items-center justify-between text-xs font-mono';
+
     if (data.status === 'healthy' && data.model_loaded) {
-      statusBadge.className = 'flex items-center space-x-2 px-3 py-1.5 rounded-md bg-zinc-900 border border-zinc-800 font-mono text-zinc-300';
-      statusText.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-500 inline-block mr-1"></span>FastAPI: Online (${latency}ms)`;
+      statusText.innerHTML = `<span class="px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-mono text-[11px] font-semibold flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>Online (${latency}ms)</span>`;
     } else {
-      statusText.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-500 inline-block mr-1"></span>FastAPI: Degraded`;
+      statusText.innerHTML = `<span class="px-2.5 py-0.5 rounded-full bg-amber-50 text-amber-700 border border-amber-200 font-mono text-[11px] font-semibold flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-amber-500"></span>Degraded</span>`;
     }
   } catch (err) {
-    statusText.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-500 inline-block mr-1"></span>FastAPI: Offline`;
+    if (statusBadge) statusBadge.className = 'flex items-center justify-between text-xs font-mono';
+    statusText.innerHTML = `<span class="px-2.5 py-0.5 rounded-full bg-rose-50 text-rose-700 border border-rose-200 font-mono text-[11px] font-semibold flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-rose-500"></span>Offline</span>`;
   }
 }
 
 /**
- * Initializes the two rolling Chart.js strip-charts with shadcn Zinc dark theme styling.
+ * Initializes the two rolling Chart.js strip-charts matching the reference design:
+ * clean white surface, smooth curves, horizontal-only gridlines, and circular dot legends.
  */
 function initCharts() {
   const chartFont = {
     family: "'Inter', sans-serif",
-    size: 10,
+    size: 11,
   };
 
   const commonScales = {
     x: {
-      grid: { color: 'rgba(39, 39, 42, 0.6)', drawBorder: false },
-      ticks: { color: '#71717a', font: chartFont, maxTicksLimit: 8 },
+      grid: { display: false },
+      ticks: { color: '#94a3b8', font: chartFont, maxTicksLimit: 8, padding: 8 },
     },
     y: {
-      grid: { color: 'rgba(39, 39, 42, 0.6)', drawBorder: false },
-      ticks: { color: '#71717a', font: chartFont },
+      grid: { color: 'rgba(0, 0, 0, 0.05)', drawBorder: false },
+      ticks: { color: '#94a3b8', font: chartFont, padding: 8 },
     }
   };
 
-  // 1. Mechanical Strip-Chart (Torque [Nm] & Scaled Speed [RPM / 50])
-  const ctxMech = document.getElementById('mechanicalChart').getContext('2d');
+  // 1. Mechanical Dynamics (Torque in Royal Blue, Speed in Warm Orange)
+  const canvasMech = document.getElementById('mechanicalChart');
+  const ctxMech = canvasMech.getContext('2d');
+
   state.mechanicalChart = new Chart(ctxMech, {
     type: 'line',
     data: {
       labels: [],
       datasets: [
         {
-          label: 'Torque [Nm]',
+          label: 'Torque (Nm)',
           data: [],
-          borderColor: '#3b82f6',
-          backgroundColor: 'rgba(59, 130, 246, 0.1)',
-          borderWidth: 2,
+          borderColor: '#2563eb', // Restored Vibrant Royal Blue
+          borderWidth: 2.5,
           pointRadius: 0,
-          pointHoverRadius: 4,
-          tension: 0.35,
+          pointHoverRadius: 6,
+          pointBackgroundColor: '#2563eb',
+          tension: 0.45,
           fill: false,
         },
         {
-          label: 'Speed / 50 [rpm]',
+          label: 'Speed / 50 (rpm)',
           data: [],
-          borderColor: '#c084fc',
-          backgroundColor: 'rgba(192, 132, 252, 0.1)',
-          borderWidth: 2,
+          borderColor: '#f59e0b', // Warm Orange/Amber
+          borderWidth: 2.5,
           pointRadius: 0,
-          pointHoverRadius: 4,
-          tension: 0.35,
+          pointHoverRadius: 6,
+          pointBackgroundColor: '#f59e0b',
+          tension: 0.45,
           fill: false,
         }
       ]
@@ -127,13 +132,17 @@ function initCharts() {
       plugins: {
         legend: { display: false },
         tooltip: {
-          backgroundColor: '#18181b',
-          borderColor: '#27272a',
+          backgroundColor: '#ffffff',
+          titleColor: '#0f172a',
+          bodyColor: '#334155',
+          borderColor: '#e2e8f0',
           borderWidth: 1,
-          titleFont: { size: 11, weight: '600' },
+          cornerRadius: 12,
+          titleFont: { size: 12, weight: '700' },
           bodyFont: { size: 11 },
-          padding: 8,
-          boxPadding: 4,
+          padding: 12,
+          boxPadding: 6,
+          usePointStyle: true,
         }
       },
       scales: {
@@ -147,8 +156,10 @@ function initCharts() {
     }
   });
 
-  // 2. Thermal Dynamics Strip-Chart (Air Temp vs Process Temp [K])
-  const ctxTherm = document.getElementById('thermalChart').getContext('2d');
+  // 2. Thermal Dynamics (Process Temp in Warm Amber, Air Temp in Cyan/Blue)
+  const canvasTherm = document.getElementById('thermalChart');
+  const ctxTherm = canvasTherm.getContext('2d');
+
   state.thermalChart = new Chart(ctxTherm, {
     type: 'line',
     data: {
@@ -158,22 +169,22 @@ function initCharts() {
           label: 'Process Temp [K]',
           data: [],
           borderColor: '#f59e0b',
-          backgroundColor: 'rgba(245, 158, 11, 0.1)',
-          borderWidth: 2,
+          borderWidth: 2.5,
           pointRadius: 0,
-          pointHoverRadius: 4,
-          tension: 0.35,
+          pointHoverRadius: 6,
+          pointBackgroundColor: '#f59e0b',
+          tension: 0.45,
           fill: false,
         },
         {
           label: 'Air Temp [K]',
           data: [],
-          borderColor: '#06b6d4',
-          backgroundColor: 'rgba(6, 182, 212, 0.1)',
-          borderWidth: 2,
+          borderColor: '#0284c7',
+          borderWidth: 2.5,
           pointRadius: 0,
-          pointHoverRadius: 4,
-          tension: 0.35,
+          pointHoverRadius: 6,
+          pointBackgroundColor: '#0284c7',
+          tension: 0.45,
           fill: false,
         }
       ]
@@ -186,13 +197,17 @@ function initCharts() {
       plugins: {
         legend: { display: false },
         tooltip: {
-          backgroundColor: '#18181b',
-          borderColor: '#27272a',
+          backgroundColor: '#ffffff',
+          titleColor: '#0f172a',
+          bodyColor: '#334155',
+          borderColor: '#e2e8f0',
           borderWidth: 1,
-          titleFont: { size: 11, weight: '600' },
+          cornerRadius: 12,
+          titleFont: { size: 12, weight: '700' },
           bodyFont: { size: 11 },
-          padding: 8,
-          boxPadding: 4,
+          padding: 12,
+          boxPadding: 6,
+          usePointStyle: true,
         }
       },
       scales: {
@@ -321,22 +336,25 @@ function updateDashboardUI(tick) {
   document.getElementById('kpi-speed-text').textContent = `${sensors.rotational_speed_rpm} RPM`;
   document.getElementById('kpi-wear-text').textContent = `Wear: ${sensors.tool_wear_min} min`;
 
-  // 3. KPI: Calibrated Risk & Progress Bar
+  // 3. KPI: Calibrated Risk (Dynamic Card: Clean Slate in Nominal, Amber in Warning, Orange in High Risk, Blood Crimson in Critical)
   const riskPctStr = (risk * 100).toFixed(2);
   const riskTextEl = document.getElementById('kpi-risk-text');
-  const riskBarEl = document.getElementById('kpi-risk-bar');
-  riskTextEl.textContent = `${riskPctStr}%`;
+  if (riskTextEl) riskTextEl.textContent = `${riskPctStr}%`;
 
-  // Visual gauge width: scale relative to 5% max visual range for high sensitivity around t*=2.0%
-  const visualBarWidth = Math.min(100, (risk / 0.05) * 100);
-  riskBarEl.style.width = `${Math.max(4, visualBarWidth)}%`;
+  const riskCard = document.getElementById('kpi-risk-card');
+  const riskTitle = document.getElementById('kpi-risk-title');
+  const riskIcon = document.getElementById('kpi-risk-icon');
+  const riskThresholdSub = document.getElementById('kpi-risk-threshold-subtitle');
+  const riskStatusLabel = document.getElementById('kpi-risk-status-label');
+  const riskCutoffLabel = document.getElementById('kpi-risk-cutoff-label');
+  const riskBar = document.getElementById('kpi-risk-bar');
 
-  // 4. KPI: Machine Health State & Alert Box
+  // 4. KPI: Machine Health State (Dark Slate Navy in Nominal, Amber in Warning, Orange in High Risk, Deep Blood Maroon in Critical)
   const stateCard = document.getElementById('kpi-state-card');
+  const stateTitle = document.getElementById('kpi-state-title');
+  const stateIcon = document.getElementById('kpi-state-icon');
   const stateText = document.getElementById('kpi-state-text');
   const stateDesc = document.getElementById('kpi-state-desc');
-  const stateBar = document.getElementById('kpi-state-bar');
-  const stateIcon = document.getElementById('kpi-state-icon');
   const tierBadge = document.getElementById('kpi-state-tier');
 
   const alertBox = document.getElementById('alert-callout-box');
@@ -345,63 +363,150 @@ function updateDashboardUI(tick) {
   const alertIcon = document.getElementById('alert-callout-icon');
 
   const tierName = sensors.machine_type === 'L' ? 'Low (L)' : sensors.machine_type === 'M' ? 'Medium (M)' : 'High (H)';
-  tierBadge.textContent = `Tier: ${tierName}`;
+  if (tierBadge) tierBadge.textContent = `Tier: ${tierName}`;
 
-  if (pred.risk_tier === 'CRITICAL' || risk >= THRESHOLD) {
-    // 🔴 Critical Shutdown State
-    stateText.textContent = 'CRITICAL SHUTDOWN';
-    stateText.className = 'text-xl font-bold tracking-tight text-rose-400';
-    stateDesc.textContent = 'Operational risk exceeds economic cutoff (t* = 2.0%). Preventative shutdown initiated.';
-    stateBar.className = 'absolute bottom-0 left-0 right-0 h-0.5 bg-rose-500';
-    stateCard.className = 'bg-zinc-900 border border-rose-500/50 glow-rose rounded-xl p-4.5 relative overflow-hidden transition-all duration-300';
-    riskBarEl.className = 'bg-rose-500 h-1.5 rounded-full transition-all duration-300';
-    
-    alertBox.className = 'p-3.5 rounded-lg border border-rose-800/60 bg-rose-950/40 text-rose-400 space-y-1';
-    alertTitle.textContent = 'EMERGENCY SHUTDOWN RECOMMENDED';
-    alertDesc.textContent = `AI Risk (${riskPctStr}%) exceeds calibrated threshold (2.0%). Immediate inspection prevents $5,000 catastrophic breakdown.`;
+  if (risk >= 0.60) {
+    // 🔴 4. Extreme / Catastrophic State (e.g. 90% Risk) - Blood Red Maroon + Emergency Pulse
+    if (stateText) stateText.textContent = 'CRITICAL';
+    if (stateDesc) {
+      stateDesc.textContent = `Catastrophic breakdown imminent (${riskPctStr}%)! Automatic shutdown initiated.`;
+      stateDesc.className = 'text-xs text-white font-medium leading-relaxed truncate';
+    }
+    if (stateTitle) stateTitle.className = 'text-xs font-medium text-white/80 tracking-wide';
+    if (stateIcon) stateIcon.className = 'w-4 h-4 text-white/80';
+    if (tierBadge) tierBadge.className = 'text-xs font-mono text-white/85 mt-0.5';
+    if (stateCard) stateCard.className = 'bg-[#7f1d1d] text-white rounded-3xl p-6 flex flex-col justify-between shadow-xl shadow-rose-950/30 ring-2 ring-rose-500/50 transition-all duration-300 relative overflow-hidden';
 
-    if (window.lucide) {
-      stateIcon.setAttribute('data-lucide', 'alert-triangle');
-      stateIcon.className = 'w-4 h-4 text-rose-400';
+    if (riskCard) riskCard.className = 'bg-[#b91c1c] text-white rounded-3xl p-6 flex flex-col justify-between shadow-xl shadow-rose-900/30 transition-all duration-300 relative overflow-hidden';
+    if (riskTitle) riskTitle.className = 'text-xs font-medium text-white/80 tracking-wide';
+    if (riskIcon) riskIcon.className = 'w-4 h-4 text-white/80';
+    if (riskTextEl) riskTextEl.className = 'text-2xl font-bold font-mono tracking-tight text-white';
+    if (riskThresholdSub) riskThresholdSub.className = 'text-xs font-mono text-white/85 mt-0.5';
+    if (riskCutoffLabel) riskCutoffLabel.className = 'font-mono text-[11px] text-white/80';
+    if (riskStatusLabel) {
+      riskStatusLabel.className = 'px-2.5 py-0.5 rounded-full bg-rose-950/60 text-white font-mono text-[11px] font-bold border border-rose-400/40 animate-pulse';
+      riskStatusLabel.textContent = 'CRITICAL SHUTDOWN';
+    }
+    if (riskBar) {
+      riskBar.className = 'absolute bottom-0 left-0 h-1 bg-rose-400 animate-pulse transition-all duration-500';
+      riskBar.style.width = `${Math.min(100, Math.max(5, risk * 100))}%`;
+    }
+
+    if (alertBox) alertBox.className = 'p-4 rounded-2xl bg-rose-100 border-2 border-rose-600 text-rose-950 flex flex-col gap-1.5 transition-all';
+    if (alertTitle) alertTitle.textContent = 'EMERGENCY CRITICAL SHUTDOWN';
+    if (alertDesc) alertDesc.textContent = `Extreme catastrophic failure risk (${riskPctStr}%). Automatic machine halt recommended immediately to avoid $5,000+ spindle ruin.`;
+
+    if (window.lucide && alertIcon) {
       alertIcon.setAttribute('data-lucide', 'alert-octagon');
+      alertIcon.className = 'w-4 h-4 text-rose-600 animate-pulse';
+      lucide.createIcons();
+    }
+  } else if (risk >= THRESHOLD || pred.risk_tier === 'CRITICAL') {
+    // 🟠 3. High Risk / Actionable Mid-Range Fault (e.g. 40% Risk) - Vivid Orange (Clearly different from 90%)
+    if (stateText) stateText.textContent = 'HIGH RISK';
+    if (stateDesc) {
+      stateDesc.textContent = `Failure risk (${riskPctStr}%) breached economic cutoff (t* = 2.0%). Tool maintenance required.`;
+      stateDesc.className = 'text-xs text-white font-medium leading-relaxed truncate';
+    }
+    if (stateTitle) stateTitle.className = 'text-xs font-medium text-white/80 tracking-wide';
+    if (stateIcon) stateIcon.className = 'w-4 h-4 text-white/80';
+    if (tierBadge) tierBadge.className = 'text-xs font-mono text-white/85 mt-0.5';
+    if (stateCard) stateCard.className = 'bg-[#ea580c] text-white rounded-3xl p-6 flex flex-col justify-between shadow-lg shadow-orange-500/25 transition-all duration-300 relative overflow-hidden';
+
+    if (riskCard) riskCard.className = 'bg-[#f97316] text-white rounded-3xl p-6 flex flex-col justify-between shadow-lg shadow-orange-500/20 transition-all duration-300 relative overflow-hidden';
+    if (riskTitle) riskTitle.className = 'text-xs font-medium text-white/80 tracking-wide';
+    if (riskIcon) riskIcon.className = 'w-4 h-4 text-white/80';
+    if (riskTextEl) riskTextEl.className = 'text-2xl font-bold font-mono tracking-tight text-white';
+    if (riskThresholdSub) riskThresholdSub.className = 'text-xs font-mono text-white/85 mt-0.5';
+    if (riskCutoffLabel) riskCutoffLabel.className = 'font-mono text-[11px] text-white/80';
+    if (riskStatusLabel) {
+      riskStatusLabel.className = 'px-2.5 py-0.5 rounded-full bg-white/25 text-white font-mono text-[11px] font-bold';
+      riskStatusLabel.textContent = `HIGH RISK (${riskPctStr}%)`;
+    }
+    if (riskBar) {
+      riskBar.className = 'absolute bottom-0 left-0 h-1 bg-orange-200 transition-all duration-500';
+      riskBar.style.width = `${Math.min(100, Math.max(5, risk * 100))}%`;
+    }
+
+    if (alertBox) alertBox.className = 'p-4 rounded-2xl bg-orange-50 border-2 border-orange-400 text-orange-950 flex flex-col gap-1.5 transition-all';
+    if (alertTitle) alertTitle.textContent = 'ACTIONABLE ALERT: MAINTENANCE REQUIRED';
+    if (alertDesc) alertDesc.textContent = `AI Risk (${riskPctStr}%) exceeds calibrated cutoff (2.0%). Schedule inspection and tool swap before next operational shift.`;
+
+    if (window.lucide && alertIcon) {
+      alertIcon.setAttribute('data-lucide', 'alert-triangle');
+      alertIcon.className = 'w-4 h-4 text-orange-600';
       lucide.createIcons();
     }
   } else if (pred.risk_tier === 'WARNING' || risk >= 0.010) {
-    // 🟡 Warning State (Approaching Threshold)
-    stateText.textContent = 'PRE-FAILURE WARNING';
-    stateText.className = 'text-xl font-bold tracking-tight text-amber-400';
-    stateDesc.textContent = 'Thermal or mechanical stress is elevating near threshold limits. Monitor closely.';
-    stateBar.className = 'absolute bottom-0 left-0 right-0 h-0.5 bg-amber-500';
-    stateCard.className = 'bg-zinc-900 border border-amber-500/40 glow-amber rounded-xl p-4.5 relative overflow-hidden transition-all duration-300';
-    riskBarEl.className = 'bg-amber-500 h-1.5 rounded-full transition-all duration-300';
+    // 🟡 2. Warning / Advisory State (1.0% - 2.0%) - Warm Amber
+    if (stateText) stateText.textContent = 'WARNING';
+    if (stateDesc) {
+      stateDesc.textContent = 'Thermal or mechanical stress is elevating near threshold limits. Monitor closely.';
+      stateDesc.className = 'text-xs text-white font-medium leading-relaxed truncate';
+    }
+    if (stateTitle) stateTitle.className = 'text-xs font-medium text-white/80 tracking-wide';
+    if (stateIcon) stateIcon.className = 'w-4 h-4 text-white/80';
+    if (tierBadge) tierBadge.className = 'text-xs font-mono text-white/85 mt-0.5';
+    if (stateCard) stateCard.className = 'bg-[#d97706] text-white rounded-3xl p-6 flex flex-col justify-between shadow-lg shadow-amber-500/20 transition-all duration-300 relative overflow-hidden';
 
-    alertBox.className = 'p-3.5 rounded-lg border border-amber-800/40 bg-amber-950/20 text-amber-400 space-y-1';
-    alertTitle.textContent = 'ELEVATED STRESS ENVELOPE';
-    alertDesc.textContent = `Telemetry shows elevated strain (Risk: ${riskPctStr}%). Nearing cutoff threshold.`;
+    if (riskCard) riskCard.className = 'bg-[#f59e0b] text-white rounded-3xl p-6 flex flex-col justify-between shadow-lg shadow-amber-500/20 transition-all duration-300 relative overflow-hidden';
+    if (riskTitle) riskTitle.className = 'text-xs font-medium text-white/80 tracking-wide';
+    if (riskIcon) riskIcon.className = 'w-4 h-4 text-white/80';
+    if (riskTextEl) riskTextEl.className = 'text-2xl font-bold font-mono tracking-tight text-white';
+    if (riskThresholdSub) riskThresholdSub.className = 'text-xs font-mono text-white/85 mt-0.5';
+    if (riskCutoffLabel) riskCutoffLabel.className = 'font-mono text-[11px] text-white/80';
+    if (riskStatusLabel) {
+      riskStatusLabel.className = 'px-2.5 py-0.5 rounded-full bg-white/20 text-white font-mono text-[11px] font-semibold';
+      riskStatusLabel.textContent = 'ELEVATED RISK';
+    }
+    if (riskBar) {
+      riskBar.className = 'absolute bottom-0 left-0 h-1 bg-amber-200 transition-all duration-500';
+      riskBar.style.width = `${Math.min(100, Math.max(5, risk * 100))}%`;
+    }
 
-    if (window.lucide) {
-      stateIcon.setAttribute('data-lucide', 'alert-circle');
-      stateIcon.className = 'w-4 h-4 text-amber-400';
+    if (alertBox) alertBox.className = 'p-4 rounded-2xl bg-amber-50 border-2 border-amber-400 text-amber-950 flex flex-col gap-1.5 transition-all';
+    if (alertTitle) alertTitle.textContent = 'PREVENTATIVE INSPECTION ADVISORY';
+    if (alertDesc) alertDesc.textContent = `Telemetry shows elevated strain (Risk: ${riskPctStr}%). Approaching 2.0% cutoff threshold.`;
+
+    if (window.lucide && alertIcon) {
       alertIcon.setAttribute('data-lucide', 'alert-triangle');
+      alertIcon.className = 'w-4 h-4 text-amber-600';
       lucide.createIcons();
     }
   } else {
-    // 🟢 Optimal Normal State
-    stateText.textContent = 'OPTIMAL';
-    stateText.className = 'text-xl font-bold tracking-tight text-emerald-400';
-    stateDesc.textContent = 'All sensor envelopes within safe mechanical limits.';
-    stateBar.className = 'absolute bottom-0 left-0 right-0 h-0.5 bg-emerald-500';
-    stateCard.className = 'bg-zinc-900 border border-zinc-800 rounded-xl p-4.5 relative overflow-hidden transition-all duration-300';
-    riskBarEl.className = 'bg-emerald-500 h-1.5 rounded-full transition-all duration-300';
+    // 🟢 1. Optimal Normal State (< 1.0%) - Clean Shadcn Black + White Card (No Red Anywhere)
+    if (stateText) stateText.textContent = 'OPTIMAL';
+    if (stateDesc) {
+      stateDesc.textContent = 'Safe mechanical limits.';
+      stateDesc.className = 'text-xs text-slate-300 leading-relaxed truncate';
+    }
+    if (stateTitle) stateTitle.className = 'text-xs font-medium text-slate-400 tracking-wide';
+    if (stateIcon) stateIcon.className = 'w-4 h-4 text-slate-400';
+    if (tierBadge) tierBadge.className = 'text-xs font-mono text-slate-400 mt-0.5';
+    if (stateCard) stateCard.className = 'bg-slate-900 text-white rounded-3xl p-6 flex flex-col justify-between shadow-lg shadow-slate-900/10 transition-all duration-300 relative overflow-hidden';
 
-    alertBox.className = 'p-3.5 rounded-lg border border-emerald-800/40 bg-emerald-950/20 text-emerald-400 space-y-1';
-    alertTitle.textContent = 'CONTINUE RUNNING';
-    alertDesc.textContent = 'Risk probability is below calibrated threshold (t* = 0.020). Preventative inspection not required.';
+    if (riskCard) riskCard.className = 'bg-white border border-slate-200/90 text-slate-900 rounded-3xl p-6 flex flex-col justify-between shadow-sm transition-all duration-300 relative overflow-hidden';
+    if (riskTitle) riskTitle.className = 'text-xs font-medium text-slate-500 tracking-wide';
+    if (riskIcon) riskIcon.className = 'w-4 h-4 text-slate-400';
+    if (riskTextEl) riskTextEl.className = 'text-2xl font-bold font-mono tracking-tight text-slate-900';
+    if (riskThresholdSub) riskThresholdSub.className = 'text-xs font-mono text-slate-400 mt-0.5';
+    if (riskCutoffLabel) riskCutoffLabel.className = 'font-mono text-[11px] text-slate-400';
+    if (riskStatusLabel) {
+      riskStatusLabel.className = 'px-2.5 py-0.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-mono text-[11px] font-medium';
+      riskStatusLabel.textContent = 'Safe (<1%)';
+    }
+    if (riskBar) {
+      riskBar.className = 'absolute bottom-0 left-0 h-1 bg-emerald-400 transition-all duration-500';
+      riskBar.style.width = `${Math.max(4, risk * 100)}%`;
+    }
 
-    if (window.lucide) {
-      stateIcon.setAttribute('data-lucide', 'shield-check');
-      stateIcon.className = 'w-4 h-4 text-emerald-400';
+    if (alertBox) alertBox.className = 'p-4 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-800 flex flex-col gap-1.5 transition-all';
+    if (alertTitle) alertTitle.textContent = 'CONTINUE RUNNING';
+    if (alertDesc) alertDesc.textContent = 'Risk probability is below calibrated threshold (t* = 2.0%). Machine running nominal.';
+
+    if (window.lucide && alertIcon) {
       alertIcon.setAttribute('data-lucide', 'check-circle');
+      alertIcon.className = 'w-4 h-4 text-emerald-600';
       lucide.createIcons();
     }
   }
@@ -410,11 +515,11 @@ function updateDashboardUI(tick) {
   const gt = tick.ground_truth;
   const gtBadge = document.getElementById('ground-truth-badge');
   if (gt && gt.machine_failure) {
-    gtBadge.className = 'px-2 py-0.5 text-[10px] font-mono rounded bg-rose-950 text-rose-400 border border-rose-800/70';
+    gtBadge.className = 'px-2.5 py-1 text-[11px] font-mono rounded-lg bg-rose-100 text-rose-700 border border-rose-200 font-semibold';
     const modes = gt.active_failure_modes && gt.active_failure_modes.length > 0 ? gt.active_failure_modes.join(', ') : 'Failure';
     gtBadge.textContent = `Ground Truth: FAULT (${modes})`;
   } else {
-    gtBadge.className = 'px-2 py-0.5 text-[10px] font-mono rounded bg-zinc-800 text-zinc-400';
+    gtBadge.className = 'px-2.5 py-1 text-[11px] font-mono rounded-lg bg-slate-100 text-slate-600 font-medium';
     gtBadge.textContent = 'Ground Truth: Normal (0)';
   }
 }
@@ -424,6 +529,7 @@ function updateDashboardUI(tick) {
  */
 function setupTransportControls() {
   const btnPlayPause = document.getElementById('btn-play-pause');
+  const btnStepBack = document.getElementById('btn-step-back');
   const btnStep = document.getElementById('btn-step');
   const btnReset = document.getElementById('btn-reset');
   const timelineSlider = document.getElementById('timeline-slider');
@@ -437,7 +543,16 @@ function setupTransportControls() {
     }
   });
 
-  // Step +1 tick
+  // Step -1 tick backward
+  if (btnStepBack) {
+    btnStepBack.addEventListener('click', () => {
+      pausePlayback();
+      const prevIdx = (state.currentIndex - 1 + state.maxTicks) % state.maxTicks;
+      loadTick(prevIdx);
+    });
+  }
+
+  // Step +1 tick forward
   btnStep.addEventListener('click', () => {
     pausePlayback();
     const nextIdx = (state.currentIndex + 1) % state.maxTicks;
@@ -457,14 +572,14 @@ function setupTransportControls() {
     loadTick(targetIdx);
   });
 
-  // Speed toggles (1x, 2x, 5x)
+  // Speed toggles (1x, 2x, 5x) - Unified rounded-2xl styling
   const speedButtons = document.querySelectorAll('.speed-btn');
   speedButtons.forEach(btn => {
     btn.addEventListener('click', () => {
       speedButtons.forEach(b => {
-        b.className = 'speed-btn px-2 py-1 rounded bg-zinc-900 text-zinc-400 hover:bg-zinc-800 border border-zinc-800';
+        b.className = 'speed-btn px-3 py-1 rounded-2xl bg-slate-100 text-slate-600 hover:bg-slate-200 font-medium cursor-pointer transition-colors';
       });
-      btn.className = 'speed-btn px-2 py-1 rounded bg-zinc-800 text-zinc-200 border border-zinc-700';
+      btn.className = 'speed-btn px-3 py-1 rounded-2xl bg-slate-900 text-white font-medium cursor-pointer shadow-sm';
 
       state.playbackSpeed = parseFloat(btn.dataset.speed);
       if (state.isPlaying) {
@@ -541,16 +656,31 @@ function setupTabControls() {
   const contentShap = document.getElementById('tab-content-shap');
   const contentSandbox = document.getElementById('tab-content-sandbox');
 
+  const activeClasses = 'w-full py-2.5 px-4 rounded-2xl bg-slate-900 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-sm transition-all cursor-pointer';
+  const inactiveClasses = 'w-full py-2.5 px-4 rounded-2xl text-slate-600 hover:text-slate-900 hover:bg-slate-200/60 font-semibold text-xs flex items-center justify-center gap-2 transition-all cursor-pointer';
+
   btnShap.addEventListener('click', () => {
-    btnShap.className = 'px-3.5 py-1.5 rounded-lg bg-zinc-800 text-zinc-100 font-medium text-xs flex items-center space-x-2 border border-zinc-700';
-    btnSandbox.className = 'px-3.5 py-1.5 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-850 font-medium text-xs flex items-center space-x-2 transition-colors';
+    btnShap.className = activeClasses;
+    const iconShap = btnShap.querySelector('i');
+    if (iconShap) iconShap.className = 'w-3.5 h-3.5 text-white';
+
+    btnSandbox.className = inactiveClasses;
+    const iconSb = btnSandbox.querySelector('i');
+    if (iconSb) iconSb.className = 'w-3.5 h-3.5 text-slate-500';
+
     contentShap.classList.remove('hidden');
     contentSandbox.classList.add('hidden');
   });
 
   btnSandbox.addEventListener('click', () => {
-    btnSandbox.className = 'px-3.5 py-1.5 rounded-lg bg-zinc-800 text-zinc-100 font-medium text-xs flex items-center space-x-2 border border-zinc-700';
-    btnShap.className = 'px-3.5 py-1.5 rounded-lg text-zinc-400 hover:text-zinc-200 hover:bg-zinc-850 font-medium text-xs flex items-center space-x-2 transition-colors';
+    btnSandbox.className = activeClasses;
+    const iconSb = btnSandbox.querySelector('i');
+    if (iconSb) iconSb.className = 'w-3.5 h-3.5 text-white';
+
+    btnShap.className = inactiveClasses;
+    const iconShap = btnShap.querySelector('i');
+    if (iconShap) iconShap.className = 'w-3.5 h-3.5 text-slate-500';
+
     contentSandbox.classList.remove('hidden');
     contentShap.classList.add('hidden');
   });
@@ -589,6 +719,9 @@ function setupSandboxControls() {
       evaluateSandbox();
     });
   }
+
+  // Reactive initial evaluation on startup
+  evaluateSandbox();
 }
 
 // Simple debounce utility for smooth real-time slider responsiveness
@@ -630,28 +763,56 @@ async function evaluateSandbox() {
     const probPct = (pred.failure_probability * 100).toFixed(2);
     const cutoffPct = (pred.decision_threshold * 100).toFixed(2);
 
-    if (pred.risk_tier === 'CRITICAL' || pred.failure_predicted) {
+    if (pred.failure_probability >= 0.60) {
       resultPill.innerHTML = `
-        <div class="flex items-center space-x-2 text-rose-400 font-medium">
-          <span class="w-2 h-2 rounded-full bg-rose-500 animate-pulse"></span>
-          <span>CRITICAL RISK: ${probPct}% (Cutoff: ${cutoffPct}%)</span>
-          <span class="text-zinc-500 font-normal">· ${pred.recommended_action}</span>
+        <div class="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-rose-950 font-bold text-xs bg-rose-100 border-2 border-rose-600 p-4 rounded-2xl shadow-sm">
+          <div class="flex items-center gap-3">
+            <span class="w-3 h-3 rounded-full bg-rose-600 animate-pulse shrink-0"></span>
+            <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+              <span class="font-bold text-sm text-rose-950">CRITICAL SHUTDOWN: ${probPct}%</span>
+              <span class="text-rose-900 font-normal">· Catastrophic failure imminent! ${pred.recommended_action}</span>
+            </div>
+          </div>
+          <span class="text-xs font-mono font-semibold text-rose-900/80 shrink-0">Cutoff: ${cutoffPct}% (Breached)</span>
+        </div>
+      `;
+    } else if (pred.risk_tier === 'CRITICAL' || pred.failure_probability >= pred.decision_threshold) {
+      resultPill.innerHTML = `
+        <div class="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-orange-950 font-bold text-xs bg-orange-50 border-2 border-orange-400 p-4 rounded-2xl shadow-sm">
+          <div class="flex items-center gap-3">
+            <span class="w-3 h-3 rounded-full bg-orange-500 shrink-0"></span>
+            <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+              <span class="font-bold text-sm text-orange-950">HIGH RISK: ${probPct}%</span>
+              <span class="text-orange-900 font-normal">· Actionable fault. ${pred.recommended_action}</span>
+            </div>
+          </div>
+          <span class="text-xs font-mono font-semibold text-orange-900/80 shrink-0">Cutoff: ${cutoffPct}% (Breached)</span>
         </div>
       `;
     } else if (pred.risk_tier === 'WARNING' || pred.failure_probability >= 0.010) {
       resultPill.innerHTML = `
-        <div class="flex items-center space-x-2 text-amber-400 font-medium">
-          <span class="w-2 h-2 rounded-full bg-amber-500"></span>
-          <span>WARNING RISK: ${probPct}% (Cutoff: ${cutoffPct}%)</span>
-          <span class="text-zinc-500 font-normal">· ${pred.recommended_action}</span>
+        <div class="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-amber-950 font-bold text-xs bg-amber-50 border-2 border-amber-400 p-4 rounded-2xl shadow-sm">
+          <div class="flex items-center gap-3">
+            <span class="w-3 h-3 rounded-full bg-amber-500 shrink-0"></span>
+            <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+              <span class="font-bold text-sm text-amber-950">ELEVATED WARNING: ${probPct}%</span>
+              <span class="text-amber-900 font-normal">· Approaching threshold. ${pred.recommended_action}</span>
+            </div>
+          </div>
+          <span class="text-xs font-mono font-semibold text-amber-900/80 shrink-0">Cutoff: ${cutoffPct}%</span>
         </div>
       `;
     } else {
       resultPill.innerHTML = `
-        <div class="flex items-center space-x-2 text-emerald-400 font-medium">
-          <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
-          <span>OPTIMAL: ${probPct}%</span>
-          <span class="text-zinc-500 font-normal">· Nominal physical parameters</span>
+        <div class="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-emerald-950 font-bold text-xs bg-emerald-50 border border-emerald-300 p-4 rounded-2xl shadow-sm">
+          <div class="flex items-center gap-3">
+            <span class="w-3 h-3 rounded-full bg-emerald-600 shrink-0"></span>
+            <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-3">
+              <span class="font-bold text-sm text-emerald-950">OPTIMAL OPERATION: ${probPct}%</span>
+              <span class="text-emerald-900 font-normal">· Nominal physical parameters</span>
+            </div>
+          </div>
+          <span class="text-xs font-mono font-semibold text-emerald-800 shrink-0">Threshold: ${cutoffPct}%</span>
         </div>
       `;
     }
@@ -772,56 +933,70 @@ function renderShapAttributions(explanation, tickIdx) {
   // Find max absolute SHAP value for proportional bar scaling
   const maxAbsShap = Math.max(...drivers.map(d => Math.abs(d.shap_value)), 0.1);
 
-  drivers.forEach(d => {
+  drivers.forEach((d, idx) => {
     const isRiskDriver = d.shap_value > 0;
     const absVal = Math.abs(d.shap_value);
-    const barPct = Math.min(100, Math.max(6, Math.round((absVal / maxAbsShap) * 100)));
+    const barPct = Math.min(100, Math.max(4, Math.round((absVal / maxAbsShap) * 100)));
     const prettyName = FEATURE_PRETTY_NAMES[d.feature] || d.feature;
     const formattedVal = formatFeatureVal(d.feature, d.value);
 
-    const barColorClass = isRiskDriver ? 'bg-rose-500' : 'bg-emerald-500';
-    const textColorClass = isRiskDriver ? 'text-rose-400' : 'text-emerald-400';
+    // Primary positive driver gets Shadcn Black, secondary positive gets Rose, negative gets Emerald
+    let barColorClass = 'bg-rose-500';
+    let textColorClass = 'text-rose-600';
+    if (idx === 0 && isRiskDriver) {
+      barColorClass = 'bg-slate-900';
+      textColorClass = 'text-slate-900';
+    } else if (!isRiskDriver) {
+      barColorClass = 'bg-emerald-500';
+      textColorClass = 'text-emerald-600';
+    }
+
     const sign = d.shap_value >= 0 ? '+' : '';
 
     const row = document.createElement('div');
-    row.className = 'p-2 rounded bg-zinc-950 border border-zinc-850 space-y-1.5 transition-all';
+    row.className = 'flex items-center gap-4 py-1.5 px-2 hover:bg-slate-50/80 rounded-xl transition-colors group text-xs';
     row.innerHTML = `
-      <div class="flex items-center justify-between text-xs font-mono">
-        <span class="text-zinc-200 font-medium">${prettyName}</span>
-        <div class="flex items-center space-x-2">
-          <span class="text-zinc-500">${formattedVal}</span>
-          <span class="font-semibold ${textColorClass}">${sign}${d.shap_value.toFixed(3)} φ</span>
-        </div>
+      <!-- Left: Feature Name (Fixed width label) -->
+      <div class="w-44 sm:w-52 shrink-0 text-slate-600 font-sans font-medium truncate group-hover:text-slate-900 transition-colors" title="${prettyName}">
+        ${prettyName}
       </div>
-      <div class="w-full bg-zinc-800 rounded-full h-1.5 overflow-hidden">
-        <div class="${barColorClass} h-1.5 rounded-full transition-all duration-500" style="width: ${barPct}%"></div>
+
+      <!-- Center: Full-Width Horizontal Capsule Track (Styled like "Umur Mesin" reference) -->
+      <div class="flex-1 bg-slate-100 rounded-full h-3.5 relative overflow-hidden flex items-center">
+        <div class="${barColorClass} h-3.5 rounded-full transition-all duration-500 shadow-xs" style="width: ${barPct}%"></div>
+      </div>
+
+      <!-- Right: Raw Sensor Value + Shapley Attribution Delta -->
+      <div class="w-32 sm:w-36 shrink-0 text-right font-mono flex items-center justify-end gap-2 text-xs">
+        <span class="text-slate-400 font-normal text-[11px]">${formattedVal}</span>
+        <span class="font-bold ${textColorClass}">${sign}${d.shap_value.toFixed(2)} φ</span>
       </div>
     `;
     container.appendChild(row);
   });
 
-  // Update Engineering Explanation Narrative
+  // Update Engineering Explanation Narrative (Full-width banner on top)
   const explanationEl = document.getElementById('shap-explanation-text');
   const probaPct = (explanation.failure_probability * 100).toFixed(2);
   const cutoffPct = (explanation.decision_threshold * 100).toFixed(2);
 
   let statusLead = '';
   if (explanation.failure_predicted) {
-    statusLead = `<span class="text-rose-400 font-bold">[CRITICAL ALERT at Tick #${tickIdx}]</span> Calibrated failure risk of <strong class="text-zinc-100">${probaPct}%</strong> breached economic cutoff (${cutoffPct}%).`;
+    statusLead = `<span class="text-rose-600 font-bold">[CRITICAL ALERT at Tick #${tickIdx}]</span> Calibrated failure risk of <strong class="text-slate-900">${probaPct}%</strong> breached economic cutoff (${cutoffPct}%). Immediate shutdown advised.`;
   } else {
-    statusLead = `<span class="text-emerald-400 font-bold">[NOMINAL at Tick #${tickIdx}]</span> Machine operating safely with risk of <strong class="text-zinc-100">${probaPct}%</strong> (below ${cutoffPct}% threshold).`;
+    statusLead = `<span class="text-emerald-600 font-bold">[NOMINAL at Tick #${tickIdx}]</span> Machine operating safely with risk of <strong class="text-slate-900">${probaPct}%</strong> (below ${cutoffPct}% threshold).`;
   }
 
   explanationEl.innerHTML = `
-    <div class="space-y-2">
-      <p>${statusLead}</p>
-      <div class="p-2.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-300">
-        <span class="text-zinc-400 font-semibold block mb-0.5">Primary Root Cause Diagnosis:</span>
-        <span class="text-zinc-100">${explanation.primary_concern}</span>
+    <div class="flex flex-col gap-2.5">
+      <p class="leading-relaxed">${statusLead}</p>
+      <div class="p-3.5 rounded-xl bg-white border border-slate-200/90 text-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2 shadow-xs">
+        <div class="flex items-center gap-2">
+          <span class="text-slate-400 font-mono font-bold text-[11px] uppercase tracking-wider">Root Cause:</span>
+          <span class="text-slate-900 text-xs font-sans font-semibold">${explanation.primary_concern}</span>
+        </div>
+        <span class="text-[11px] font-mono text-slate-400">Additive Fairness: φ₀ + Σφᵢ = log-odds</span>
       </div>
-      <p class="text-[10px] text-zinc-500">
-        Game-theoretic Shapley values guarantee additive fairness: base log-odds (φ₀) plus the sum of all individual feature attributions (Σφᵢ) exactly equals the model's uncalibrated output.
-      </p>
     </div>
   `;
 }
