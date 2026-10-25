@@ -179,11 +179,11 @@ Net Savings vs Run-to-Failure: $288,900  (-85.0% Cost Reduction)
 Incremental Savings vs ML    : $ 13,750  (-21.2% Additional Savings)
 ```
 
-| Strategy | Total Cost | Missed Failures (FN) | False Alarms (FP) | Preventative Catches (TP) | Failure Recall |
-|---|---|---|---|---|---|
-| **Run-to-Failure** | \$340,000 | 68 | 0 | 0 | 0.00% |
-| **Default XGBoost ($t=0.50$)** | \$64,850 | 11 | 2 | 57 | 83.82% |
-| **Calibrated Engine ($t^*=0.020$)** | **\$51,100** | **4** | 29 | 64 | **94.12%** |
+| Strategy | Total Cost | TP | FP | FN | TN | Failure Recall |
+|---|---|---|---|---|---|---|
+| **Run-to-Failure (No ML)** | \,000 | 0 | 0 | 68 | 1,932 | 0.00% |
+| **Default XGBoost (=0.50$)** | \,850 | 57 | 13 | 11 | 1,919 | 83.82% |
+| **Calibrated Engine (^*=0.020$)** | **\,100** | **64** | **215** | **4** | **1,717** | **94.12%** |
 
 * **Catastrophic Failure Reduction:** Missed crashes plummeted from 68 down to **4** (a 94.12% catch rate).
 * **Economic Trade-Off:** Accepting 27 additional minor inspections (\$2,700 cost) prevented 7 catastrophic machine destructions (\$35,000 value), producing an immediate **\$32,300 gross return on inspection investment**.
