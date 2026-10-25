@@ -1,15 +1,15 @@
 # Industrial Telemetry and Predictive Maintenance System
 
-A deployed demo machine learning system and IoT telemetry microservice for early detection of milling machine component failures, cost-sensitive threshold calibration, TreeSHAP root-cause explainability, and real-time operational monitoring.
+A deployed demo machine learning system and IoT telemetry microservice for early detection of milling machine component failures, cost-sensitive threshold calibration, TreeSHAP root-cause explainability, and simulated real-time monitoring.
 
 * Live Operational Cockpit: https://industrial-predictive-maintenance-yn32.onrender.com
 * Interactive API Documentation (Swagger): https://industrial-predictive-maintenance-yn32.onrender.com/docs
 * Live Health Probe: https://industrial-predictive-maintenance-yn32.onrender.com/health
-* Note on Cloud Cold Starts: Hosted on Render's free tier. The container spins down after 15 minutes of inactivity; initial page load takes approximately 40 seconds to wake the service. Subsequent requests respond immediately.
+* Note on Cloud Cold Starts: Hosted on Render's free tier. The container spins down after 15 minutes of inactivity; initial page loads and curl commands take approximately 40 seconds to wake the service. Subsequent requests respond immediately.
 
 ---
 
-## Executive Summary and Business Impact
+## Summary and Simulated Impact
 
 In industrial manufacturing, unpredicted equipment failure leads to catastrophic downtime, worker safety hazards, and emergency repair costs. Conversely, scheduled preventative maintenance without telemetry data incurs high labor overhead and premature replacement of functioning components.
 
@@ -95,11 +95,17 @@ Rather than relying purely on raw sensor readings, domain physics features were 
    Multiplies mechanical cutting resistance by cumulative tool wear, modeling total structural fatigue on the CNC cutting insert.
 
 4. Normalized Capacity Limits:
-   Features are normalized against specific machine rating capacities (Type L: 11,000 min·Nm; Type M: 12,000 min·Nm; Type H: 13,000 min·Nm) to enable unified fleet-wide inference.
+   Features are normalized against the dataset's generating failure thresholds for Overstrain Failure (Type L: 11,000 min·Nm; Type M: 12,000 min·Nm; Type H: 13,000 min·Nm) as defined in Matzka (2020).
 
 ---
 
 ## Modeling and Evaluation Strategy
+
+### Data Partitioning and Hyperparameter Optimization Guardrails
+To prevent data leakage, evaluation was structured around strict validation boundaries:
+* Stratified Partitioning: An 80/20 stratified split (`random_state=42`) separated 8,000 training records from 2,000 holdout test records, preserving the 3.39% failure incidence across both partitions.
+* Systematic Hyperparameter Tuning: Conducted using `RandomizedSearchCV` across 25 parameter configurations over 5-fold stratified cross-validation (125 total fits) scored strictly on `average_precision` (PR-AUC). Tuned parameters: `max_depth = 5`, `learning_rate = 0.05`, `subsample = 0.8`, `colsample_bytree = 0.8`, and `min_child_weight = 2`.
+* Single Holdout Evaluation: The 2,000 holdout records were locked away during feature exploration and tuning, and scored only once at the conclusion of model selection.
 
 ### Imbalance-Aware Benchmarking
 Due to the 3.39% baseline failure rate, standard metrics such as Accuracy and ROC-AUC produce misleadingly optimistic evaluations. All modeling iterations were governed strictly by:
@@ -109,10 +115,10 @@ Due to the 3.39% baseline failure rate, standard metrics such as Accuracy and RO
 
 | Model Iteration | Holdout PR-AUC | Failure Recall | F2-Score |
 |---|---|---|---|
-| Baseline Dummy Classifier | 0.0340 | 0.0000 | 0.000 |
-| Default XGBoost (Raw Features) | 0.8436 | 0.7794 | 0.812 |
-| Tuned Physics Pipeline (t = 0.50) | 0.8819 | 0.8382 | 0.833 |
-| Calibrated Pipeline (t* = 0.020) | 0.8819 | 0.9412 | 0.581 |
+| Baseline Dummy Classifier | 0.0340 | 0.00% | 0.000 |
+| Default XGBoost Pipeline (Untuned) | 0.8659 | 82.35% | 0.828 |
+| Tuned Physics Pipeline (t = 0.50) | 0.8819 | 83.82% | 0.833 |
+| Calibrated Pipeline (t* = 0.020) | 0.8819 | 94.12% | 0.581 |
 
 Note: F2 is not the optimization target; the threshold minimizes simulated operational cost, so F2 drops as precision falls.
 
@@ -145,6 +151,12 @@ Machine learning models default to a 0.50 decision threshold, which implicitly a
 By executing Out-of-Fold (OOF) cross-validation threshold sweeping across 100 candidate cutoffs on 8,000 training records, the optimal operational cutoff was determined to be:
 t* = 0.020
 
+### Threshold Stability Basin
+Out-of-fold threshold sweeping reveals that the optimal cutoff is not a brittle, overfitted point, but a resilient operating basin. Across thresholds between $t = 0.015$ and $t = 0.035$, total simulated operational cost remains stably within 5% of the absolute minimum ($164,700 +/- $8,000 on training OOF predictions). This allows factory operators to tune sensitivity within this range without significant economic degradation.
+
+The full Out-of-Fold sweep curve is plotted in:
+`reports/figures/day5_cost_vs_threshold_curve.png`
+
 ### Holdout Test Financial Benchmark (2,000 Machines | 68 True Failures)
 
 Full confusion matrix and simulated costs under the assumed cost matrix:
@@ -170,13 +182,13 @@ Predictions are decomposed additively in margin (log-odds) space:
 Margin(x) = phi_0 + sum(phi_i)
 
 Where:
-* phi_0: Expected baseline fleet risk in margin (log-odds) space, equal to 0.7154 (centered around ~0.7 due to scale_pos_weight = 28.52).
+* phi_0: Expected baseline leaf margin across the tree ensemble, equal to 0.7154. In TreeSHAP, this represents the cover-weighted mean margin, where scale_pos_weight = 28.52 inflates the positive failure instances' Hessian weights in tree covers, shifting the expected leaf margin upward into positive log-odds.
 * phi_i: Individual feature contributions pushing risk higher (risk drivers) or lower (stabilizing factors).
 * Probability mapping: Calculated through the logistic link function P(failure) = 1 / (1 + exp(-Margin(x))).
 
 ---
 
-## Production API Specification
+## API Specification
 
 The FastAPI microservice serves low-latency predictions, explainability payloads, and simulated IoT sensor streams. Model inference executes on CPU in under 2ms per record (excluding network propagation latency).
 
@@ -196,6 +208,7 @@ Probes system operational readiness and loaded model artifact state.
 #### POST /predict
 Scores incoming telemetry payload against the calibrated threshold.
 ```bash
+# Note: If the container is sleeping on Render's free tier, curl requests may take ~40 seconds on cold start.
 curl -X POST "https://industrial-predictive-maintenance-yn32.onrender.com/predict" \
      -H "Content-Type: application/json" \
      -d '{
@@ -223,6 +236,7 @@ Actual Response:
 #### POST /explain
 Performs real-time TreeSHAP decomposition on candidate machine telemetry.
 ```bash
+# Note: If the container is sleeping on Render's free tier, curl requests may take ~40 seconds on cold start.
 curl -X POST "https://industrial-predictive-maintenance-yn32.onrender.com/explain" \
      -H "Content-Type: application/json" \
      -d '{
@@ -280,7 +294,7 @@ Actual Response:
 ```
 
 #### GET /stream/tick?index=N
-Replays physical sensor readings from historical holdout test records for real-time monitoring and streaming verification.
+Replays physical sensor readings from historical holdout test records for simulated real-time monitoring and streaming verification.
 
 ---
 
@@ -303,13 +317,12 @@ The service includes an integrated, zero-build industrial dashboard mounted at r
 2. Assumed Operational Cost Matrix: The economic parameters ($150 inspection, $5,000 breakdown, $100 false alarm) are stylized assumptions for demonstration; real factory savings require plant-specific accounting.
 3. Holdout Sample Size: The holdout test set contains 68 failure events, so absolute failure count differences are subject to small-sample variance.
 4. No Empirical Bootstrapping: Confidence intervals on cost savings were not generated via bootstrapping.
-5. Stable Threshold Basin: Out-of-fold threshold sweeping reveals that the optimal cutoff is not a rigid point, but a flat basin across thresholds between 0.015 and 0.035 where cost remains within 5% of optimal.
 
 ---
 
 ## Reproducing the Benchmark Results
 
-A dedicated evaluation script is included to reproduce all confusion matrices, financial costs, and F2 scores directly:
+A dedicated evaluation script is included to reproduce all model progression benchmarks, confusion matrices, and financial costs directly:
 
 ```bash
 python src/evaluate.py
@@ -318,18 +331,31 @@ python src/evaluate.py
 Expected output:
 ```text
 ======================================================================================
-HOLDOUT TEST EVALUATION BENCHMARK (2,000 MACHINES | 68 FAILURES)
+1. MODEL PROGRESSION BENCHMARK (HOLDOUT TEST: 2,000 SAMPLES | 68 FAILURES)
 ======================================================================================
-Strategy                     | Total Cost  | TP   | FP    | FN   | TN    | Recall  | F2    
+Model Iteration                      | Holdout PR-AUC | Failure Recall | F2-Score
 --------------------------------------------------------------------------------------
-Run-to-Failure (No ML)       | $340,000    | 0    | 0     | 68   | 1932  | 0.00%   | 0.000
-Default ML (t = 0.50)        | $64,850     | 57   | 13    | 11   | 1919  | 83.82%  | 0.833
-Calibrated AI (t* = 0.020)   | $51,100     | 64   | 215   | 4    | 1717  | 94.12%  | 0.581
+Baseline Dummy Classifier            | 0.0340         | 0.00%          | 0.000   
+Default XGBoost Pipeline (Untuned)   | 0.8659         | 82.35%         | 0.828   
+Tuned Physics Pipeline (t = 0.50)    | 0.8819         | 83.82%         | 0.833   
+Calibrated Pipeline (t* = 0.020)     | 0.8819         | 94.12%         | 0.581   
 ======================================================================================
-FINANCIAL SAVINGS SUMMARY (SIMULATED UNDER ASSUMED COST MATRIX):
+Note: F2 is not the optimization target; the threshold minimizes simulated operational
+cost, so F2 drops as precision falls.
+
+======================================================================================
+2. HOLDOUT FINANCIAL BENCHMARK (ASSUMED COST MATRIX: $5k FN / $150 TP / $100 FP)
+======================================================================================
+Strategy                         | Total Cost  | TP   | FP    | FN   | TN    | Recall 
+--------------------------------------------------------------------------------------
+Run-to-Failure (No ML)           | $340,000    | 0    | 0     | 68   | 1932  | 0.00%
+Default XGBoost (t = 0.50)       | $64,850     | 57   | 13    | 11   | 1919  | 83.82%
+Calibrated Decision (t* = 0.020) | $51,100     | 64   | 215   | 4    | 1717  | 94.12%
+======================================================================================
+SIMULATED FINANCIAL SAVINGS (UNDER ASSUMED COST MATRIX):
   * Savings vs. Run-to-Failure: $288,900 (-85.0%)
   * Savings vs. Default ML:     $13,750 (-21.2%)
-  * Holdout PR-AUC Score:       0.8819
+  * Critical Failure Reduction: Missed crashes dropped from 11 down to 4.
 ======================================================================================
 ```
 
@@ -426,6 +452,8 @@ uvicorn api.main:app --reload --port 8000
 
 ---
 
-## License
+## License & Attribution
 
-This project is licensed under the MIT License. Telemetry data sourced from the UCI Machine Learning Repository (Matzka, 2020).
+* Codebase License: The source code, API services, and front-end dashboard are licensed under the MIT License.
+* Dataset Attribution & License: The AI4I 2020 Predictive Maintenance Dataset is sourced from the UCI Machine Learning Repository (Matzka, 2020) and is licensed under the Creative Commons Attribution 4.0 International (CC BY 4.0) License.
+  * Citation: Matzka, S. (2020). AI4I 2020 Predictive Maintenance Dataset. UCI Machine Learning Repository. https://doi.org/10.24432/C5HS5C

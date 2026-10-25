@@ -150,7 +150,7 @@ In contrast, **Precision-Recall AUC (PR-AUC / Average Precision)** measures the 
 | Iteration / Model | Holdout PR-AUC | Failure Recall | F2-Score |
 |---|---|---|---|
 | **Baseline Dummy Classifier** | 0.0340 | 0.00% | 0.0000 |
-| **Default XGBoost (Unweighted)** | 0.8436 | 77.94% | 0.8123 |
+| **Default XGBoost Pipeline (Untuned)** | 0.8659 | 82.35% | 0.828 |
 | **Cost-Sensitive XGBoost (`scale_pos_weight`)** | 0.8672 | 80.88% | 0.8351 |
 | **Tuned Physics Pipeline (Default $t=0.50$)** | 0.8819 | 83.82% | 0.8546 |
 | **Calibrated Physics Pipeline ($t^*=0.020$)** | **0.8819** | **94.12%** | **0.8258** |
